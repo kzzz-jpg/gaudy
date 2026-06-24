@@ -27,7 +27,7 @@ func (g *guaRepo) AddGua(gua *model.Gua) (int, error) {
     	RETURNING gua_id;
 	`, gua.Title, pq.Array(gua.People), gua.Content).Scan(&guaid)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 	return guaid, nil
 }
@@ -46,12 +46,15 @@ func (g *guaRepo) GetGua(gua *model.Gua) ([]*model.Gua, error) {
 	}
 	defer row.Close()
 	for row.Next() {
-		var gua model.Gua
-		err = row.Scan(&gua.GuaId, &gua.Title, pq.Array(&gua.People), &gua.Content)
+		var item model.Gua
+		err = row.Scan(&item.GuaId, &item.Title, pq.Array(&item.People), &item.Content)
 		if err != nil {
 			return nil, err
 		}
-		guas = append(guas, &gua)
+		guas = append(guas, &item)
+	}
+	if err := row.Err(); err != nil {
+		return nil, err
 	}
 	return guas, nil
 }

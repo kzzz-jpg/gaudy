@@ -25,9 +25,9 @@ func main() {
 		api.POST("/gua/list", guaHandler.GetGuaHandler)
 	}
 
+	fmt.Println("server is run at localhost:8080")
 	if err := r.Run(":8080"); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("server is run at localhost:8080")
 }
