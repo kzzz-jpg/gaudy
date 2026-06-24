@@ -18,7 +18,7 @@ type guaHandler struct {
 }
 
 type guaReq struct {
-	guaData *model.Gua `json:"data"`
+	GuaData *model.Gua `json:"data"`
 }
 
 func NewGuaHandler(guaRepo repository.GuaRepo) GuaHandler {
@@ -29,21 +29,26 @@ func (g *guaHandler) AddGuaHandler(c *gin.Context) {
 	var req guaReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-	guaid, err := g.guaRepo.AddGua(req.guaData)
+	guaid, err := g.guaRepo.AddGua(req.GuaData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": guaid})
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"guaId": guaid}})
 }
 func (g *guaHandler) GetGuaHandler(c *gin.Context) {
 	var req guaReq
-	if err := c.ShouldBindQuery(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-	guas, err := g.guaRepo.GetGua(req.guaData)
+	guas := make([]*model.Gua, 0)
+	guas, err := g.guaRepo.GetGua(req.GuaData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": guas})
 }
