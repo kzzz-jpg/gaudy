@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"guadb/model"
+
+	"github.com/lib/pq"
 )
 
 type GuaRepo interface {
@@ -23,7 +25,7 @@ func (g *guaRepo) AddGua(gua *model.Gua) (int, error) {
 	err := g.db.QueryRow(`
     	INSERT INTO guas (title,people,content)VALUES($1,$2,$3)
     	RETURNING gua_id;
-	`, gua.Title, gua.People, gua.Content).Scan(&guaid)
+	`, gua.Title, pq.Array(gua.People), gua.Content).Scan(&guaid)
 	if err != nil {
 		return -1, err
 	}
@@ -33,25 +35,23 @@ func (g *guaRepo) GetGua(gua *model.Gua) ([]*model.Gua, error) {
 	var guas []*model.Gua
 	row, err := g.db.Query(`
 		SELECT gua_id,title,people,content FROM guas 
-		    WHERE title ILIKE '%' || REPLACE(REPLACE($1,'%','\%'),'_','\_') || '%' ESCAPE '\'
-		    OR content ILIKE '%' || REPLACE(REPLACE($2,'%','\%'),'_','\_') || '%' ESCAPE '\'
+		    WHERE ($1 <> '' AND title ILIKE '%' || REPLACE(REPLACE($1,'%','\%'),'_','\_') || '%' ESCAPE '\')
+		    OR ($2 <> '' AND content ILIKE '%' || REPLACE(REPLACE($2,'%','\%'),'_','\_') || '%' ESCAPE '\')
 			OR EXISTS(
-			    SELECT 67 FROM unnest(people) AS P WHERE P ILIKE '%' || REPLACE(REPLACE($3,'_','\_'),'%','\%') || '%'
+			    SELECT 67 FROM unnest(people) P,unnest($3::TEXT[]) Q WHERE (Q <> '' AND P ILIKE '%' || REPLACE(REPLACE(Q,'_','\_'),'%','\%') || '%' ESCAPE '\')
 			)
-    `, gua.Title, gua.People, gua.Content)
+    `, gua.Title, gua.Content, pq.Array(gua.People))
 	if err != nil {
 		return nil, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var gua model.Gua
-		err = row.Scan(&gua.Title, &gua.People, &gua.Content)
+		err = row.Scan(&gua.GuaId, &gua.Title, pq.Array(&gua.People), &gua.Content)
 		if err != nil {
 			return nil, err
 		}
 		guas = append(guas, &gua)
-	}
-	if err != nil {
-		return nil, err
 	}
 	return guas, nil
 }

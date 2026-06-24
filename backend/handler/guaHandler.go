@@ -41,4 +41,9 @@ func (g *guaHandler) GetGuaHandler(c *gin.Context) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
+	guas, err := g.guaRepo.GetGua(req.guaData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, gin.H{"data": guas})
 }

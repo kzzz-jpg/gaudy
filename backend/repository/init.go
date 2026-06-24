@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-func initdb() (*sql.DB, error) {
-	dsn := fmt.Sprintf("host:%s user:%s password:%s db:%s sslmode:%s", "localhost", "guadb", "cchs91193", "guadb", "disable")
+func Initdb() (*sql.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s", "localhost", "postgres", "cchs91193", "guadb", "disable")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -18,6 +18,7 @@ func initdb() (*sql.DB, error) {
 		    people TEXT[],
 		    content TEXT,
 		    created_at TIMESTAMP DEFAULT now()
+		)
     `)
 	if err != nil {
 		return nil, err
