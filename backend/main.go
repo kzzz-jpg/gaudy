@@ -6,9 +6,11 @@ import (
 	"guadb/repository"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	_ = godotenv.Load()
 	db, err := repository.Initdb()
 	if err != nil {
 		fmt.Println(err)
