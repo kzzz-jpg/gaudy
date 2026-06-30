@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"guadb/model"
+	"strings"
 
 	"github.com/lib/pq"
 )
@@ -12,20 +13,20 @@ type GuaRepo interface {
 	GetGua(*model.Gua) ([]*model.Gua, error)
 }
 
-type guaRepo struct {
-	db *sql.DB
-}
-
 func NewGuaRepo(db *sql.DB) GuaRepo {
 	return &guaRepo{db}
+}
+
+type guaRepo struct {
+	db *sql.DB
 }
 
 func (g *guaRepo) AddGua(gua *model.Gua) (int, error) {
 	var guaid int
 	err := g.db.QueryRow(`
-    	INSERT INTO guas (title,people,content)VALUES($1,$2,$3)
+    	INSERT INTO guas (title,people,people_str,content)VALUES($1,$2,$3,$4)
     	RETURNING gua_id;
-	`, gua.Title, pq.Array(gua.People), gua.Content).Scan(&guaid)
+	`, gua.Title, pq.Array(gua.People), strings.Join(gua.People, " "), gua.Content).Scan(&guaid)
 	if err != nil {
 		return 0, err
 	}
@@ -33,17 +34,26 @@ func (g *guaRepo) AddGua(gua *model.Gua) (int, error) {
 }
 func (g *guaRepo) GetGua(gua *model.Gua) ([]*model.Gua, error) {
 	var guas []*model.Gua
+
+	parts := []string{}
+	if gua.Title != "" {
+		parts = append(parts, gua.Title)
+	}
+	parts = append(parts, gua.People...)
+	if gua.Content != "" {
+		parts = append(parts, gua.Content)
+	}
+	searchStr := strings.Join(parts, " or ")
+
 	row, err := g.db.Query(`
 		SELECT gua_id,title,people,content FROM guas 
-		    WHERE ($1 <> '' AND title ILIKE '%' || REPLACE(REPLACE($1,'%','\%'),'_','\_') || '%' ESCAPE '\')
-		    OR ($2 <> '' AND content ILIKE '%' || REPLACE(REPLACE($2,'%','\%'),'_','\_') || '%' ESCAPE '\')
-			OR EXISTS(
-			    SELECT 67 FROM unnest(people) P,unnest($3::TEXT[]) Q WHERE (Q <> '' AND P ILIKE '%' || REPLACE(REPLACE(Q,'_','\_'),'%','\%') || '%' ESCAPE '\')
-			)
-    `, gua.Title, gua.Content, pq.Array(gua.People))
+		    WHERE search_vector @@ websearch_to_tsquery('simple',$1)
+		ORDER BY ts_rank(search_vector,websearch_to_tsquery('simple',$1)) DESC
+    `, searchStr)
 	if err != nil {
 		return nil, err
 	}
+
 	defer row.Close()
 	for row.Next() {
 		var item model.Gua
@@ -56,5 +66,6 @@ func (g *guaRepo) GetGua(gua *model.Gua) ([]*model.Gua, error) {
 	if err := row.Err(); err != nil {
 		return nil, err
 	}
+
 	return guas, nil
 }

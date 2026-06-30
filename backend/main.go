@@ -11,7 +11,7 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	db, err := repository.Initdb()
+	db, err := repository.InitPostgreDB()
 	if err != nil {
 		fmt.Println(err)
 		return
