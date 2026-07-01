@@ -13,8 +13,9 @@ type GuaRepo interface {
 	GetGua(*model.Gua) ([]*model.Gua, error)
 }
 
+// 如果環境沒有 zhparser 就 return &guaRepo{db}
 func NewGuaRepo(db *sql.DB) GuaRepo {
-	return &guaRepo{db}
+	return &guaRepoWithZh{db}
 }
 
 type guaRepo struct {

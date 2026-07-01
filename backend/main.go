@@ -11,7 +11,8 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	db, err := repository.InitPostgreDB()
+	//如果環境沒有 zhparser 就用 repository.InitPostgreDB()
+	db, err := repository.InitPostgreDBWithZhparser()
 	if err != nil {
 		fmt.Println(err)
 		return
